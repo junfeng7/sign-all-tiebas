@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}
+Index
+{% endblock %}
+{% block body %}
+
+
+<div class="btn-toolbar">
+    <button class="btn btn-primary" data-toggle="modal" data-target="#myModal">Add tieba</button>
+    <button class="btn">Select All</button>
+    <button class="btn">Delete All</button>
+    <!-- <button class="btn">Sign All</button> -->
+</div>
+
+
+
+<div class="well">
+    {% if tiebas %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tieba Name</th>
+          <th>Last Sign</th>
+          <th>Info</th>
+          <th style="width: 36px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for t in Tiebas %}
+        <tr>
+            <td><input type="checkbox" name="tieba" value={{ t['tieba'] }}></td>
+            <td>{{ t['tieba'] }}</td>
+          <td>No</td>
+          <td>NO</td>
+          <td>
+              <a href="#delete" style="color:black;">
+                  <i class="glyphicon glyphicon-remove"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>No tiebas ,Please add one.</p>
+    {% endif %}
+</div>
+
+<!-- Modal -->
+  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title">Add</h4>
+        </div>
+        <div class="modal-body">
+                <div class="input-group">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button">Tieba Name</button>
+                    </span>
+                    <input type="text" id="tieba" class="form-control">
+                </div><!-- /input-group -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary">Submit</button>
+        </div>
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+{% endblock %}
+
