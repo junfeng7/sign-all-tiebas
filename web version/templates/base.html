@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>{%block title %}{% endblock %} || Baby's Wishes</title>
+  <title>{%block title %}{% endblock %} > Sign All Tiebas</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Bootstrap -->
     <link href="{{ url_for('static',filename='bootstrap/css/bootstrap.min.css') }}" rel="stylesheet" media="screen">
@@ -22,8 +22,17 @@
 
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse navbar-ex1-collapse">
-          <ul class="nav navbar-nav">
+          <ul class="nav navbar-nav" id="headBar">
+              {% if request.path=='/' %}
             <li class="active"><a href="/">Home</a></li>
+            <li><a href="/about">About</a></li>
+            {% elif request.path=='/about' %}
+            <li><a href="/">Home</a></li>
+            <li class="active"><a href="/about">About</a></li>
+            {% else %}
+            <li><a href="/">Home</a></li>
+            <li><a href="/about">About</a></li>
+            {% endif %}
           </ul>
           <ul class="nav navbar-nav navbar-right">
             {% if g.user %}
@@ -31,6 +40,10 @@
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Welcome {{ g.user['name'] }}<b class="caret"></b></a>
               <ul class="dropdown-menu" role="menu">
                 <li><a href="/settings">Settings</a></li>
+                {% if g.admin==g.user['email'] %}
+                <li><a href="/admin">Admin</a></li>
+                {% endif %}
+
                 <li><a href="/logout">Logout</a></li>
               </ul>
             </li>
@@ -42,13 +55,14 @@
     </div>
 </nav>
 
-{%block body %}{% endblock %}
+{% block body %}{% endblock %}
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="{{ url_for('static',filename='jquery.js') }}"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="{{ url_for('static',filename='bootstrap/js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='about.js') }}"></script>
 
-
+    {% block script %}{% endblock %}
 
 </body>
 </html>

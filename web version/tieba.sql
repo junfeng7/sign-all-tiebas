@@ -21,5 +21,6 @@ CREATE TABLE IF NOT EXISTS users (
 -- DROP TABLE IF EXISTS wishes_user;
 CREATE TABLE IF NOT EXISTS tiebas_users (
     tieba_id INT NOT NULL REFERENCES tiebas(id),
-    user_id INT NOT NULL REFERENCES users(id)
+    user_id INT NOT NULL REFERENCES users(id),
+    message varchar(1000)
 );

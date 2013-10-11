@@ -26,16 +26,17 @@ data={}
 data['ie']='utf-8'
 
 for t in tieba:
-    data['kw']=t.decode('gbk').encode('utf-8')
+    #data['kw']=t.decode('gbk').encode('utf-8')#on windows
     #on linux
-    #data['kw']=t
-    #t=t.decode('utf-8').encode('gbk')
+    data['kw']=t
+    t=t.decode('utf-8').encode('gbk')
     url=urlt+t
     r=requests.get(url,headers=headers)
     data['tbs']=bs4.BeautifulSoup(r.text).body.find('script').string.split('"')[1].encode('utf-8')
     r=requests.post(signurl,headers=headers,data=data)
+    print r.text
     if r.url==signurl:
-        print t+'吧签到成功'.decode('utf-8').encode('gbk')
+        print t+'吧签到成功'
 
 
 a=raw_input('Press Enter to exit:')

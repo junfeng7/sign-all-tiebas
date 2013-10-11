@@ -24,7 +24,7 @@ Login
                         <!-- Email-->
                         <label class="control-label"  for="email">Email</label>
                         <div class="controls">
-                          <input type="email" id="email" name="email" placeholder="" class="input-xlarge">
+                          <input type="email" class="form-control" id="email" name="email" placeholder="" class="input-xlarge">
                         </div>
                       </div>
  
@@ -32,7 +32,7 @@ Login
                         <!-- Password-->
                         <label class="control-label" for="passwd">Password</label>
                         <div class="controls">
-                          <input type="password" id="passwd" name="passwd" placeholder="" class="input-xlarge">
+                          <input type="password" class="form-control" id="passwd" name="passwd" placeholder="" class="input-xlarge">
                         </div>
                       </div>
                       <br> 
@@ -54,9 +54,9 @@ Login
 
                       <div class="control-group">
                         <!-- Email -->
-                        <label class="control-label"  for="email">Email</label>
+                        <label class="control-label"  for="createEmail">Email</label>
                         <div class="controls">
-                            <input type="text" name="email" id="email" value="" class="input-xlarge"><br>
+                            <input type="email" class="form-control" name="email" id="createEmail" value="" class="input-xlarge"><br>
                         </div>
                       </div>
 
@@ -64,7 +64,7 @@ Login
                         <!-- Username -->
                         <label class="control-label"  for="signname">Username</label>
                         <div class="controls">
-                            <input type="text" name="username" id="signname" value="" class="input-xlarge"><br>
+                            <input type="text" class="form-control" name="username" id="signname" value="" class="input-xlarge"><br>
                         </div>
                       </div>
 
@@ -72,17 +72,10 @@ Login
                         <!-- Passwd -->
                         <label class="control-label"  for="signpasswd">Password</label>
                         <div class="controls">
-                            <input type="password" name="passwd" id="signpasswd" value="" class="input-xlarge"><br>
+                            <input type="password" class="form-control" name="passwd" id="signpasswd" value="" class="input-xlarge"><br>
                         </div>
                       </div>
 
-                      <div class="control-group">
-                        <!-- Cookie -->
-                        <label class="control-label"  for="cookie">Cookie</label>
-                        <div class="controls">
-                            <textarea name="cookie" id="cookie" value="" rows="3" cols="22"></textarea><br>
-                        </div>
-                      </div>
 
 
                       <br>
@@ -100,4 +93,7 @@ Login
        </div>
     </div>
 {% endblock %}
-
+{% block script %}
+<script src="{{ url_for('static',filename='serialization.js') }}"></script>
+<script src="{{ url_for('static',filename='login.js') }}"></script>
+{% endblock %}

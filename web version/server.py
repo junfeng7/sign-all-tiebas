@@ -4,7 +4,9 @@ from contextlib import closing
 import hashlib
 import urllib
 import urllib2
+import time
 from functools import wraps
+import itertools
 
 from flask import Flask,request,session,g,redirect,url_for,abort,render_template,flash,jsonify,json
 from json import loads
@@ -30,7 +32,7 @@ def connect_db():
 
 def init_db():
     with closing(connect_db()) as db:
-        with closing(app.open_resource('server.sql',mode='r')) as f:
+        with closing(app.open_resource('tieba.sql',mode='r')) as f:
             with closing(db.cursor(cursorclass=DictCursor)) as cursor:
                 cmd=''
                 for line in f:
@@ -73,6 +75,12 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if session.get('logged_in') is not True or not g.user:
             return redirect(url_for('login'))
+        g.cursor.execute("SELECT value FROM settings WHERE name='admin'")
+        admin=g.cursor.fetchone()
+        if admin:
+            g.admin=admin['value']
+        else:
+            g.admin=None
         return f(*args, **kwargs)
     return decorated_function
 
@@ -81,9 +89,7 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        g.cursor.execute("SELECT value FROM settings WHERE name='admin'")
-        admin=g.cursor.fetchone()['value']
-        if g.user['name']!=admin:
+        if g.user['email']!=g.admin or not g.admin: 
             return redirect('/')
         return f(*args, **kwargs)
     return decorated_function
@@ -95,7 +101,7 @@ def install():
     tables=g.cursor.fetchall()
     if len(tables)==4:
         needCreateTable=False
-        g.cursor.execute("SELECT * FROM users WHERE name=(SELECT value FROM settings WHERE name='admin')")
+        g.cursor.execute("SELECT * FROM users WHERE email=(SELECT value FROM settings WHERE name='admin')")
         admin=g.cursor.fetchone()
         if admin:
             return redirect('/login')
@@ -125,16 +131,15 @@ def sign():
         return redirect('/')
     username=request.form.get('username')
     passwd=request.form.get('passwd')
-    email=request.form.get('email') # not use
-    cookie=request.form.get('cookie')
+    email=request.form.get('email')
     if not username or not email or not passwd:
         abort(400)
     g.cursor.execute("SELECT * FROM users WHERE email=%s",email)
     if g.cursor.fetchone():
-        return "%s already used." % email
-    g.cursor.execute("INSERT INTO users(email,name,cookie,passwd) VALUES(%s,%s,%s,%s)",(email,username,cookie,hashlib.md5(passwd).hexdigest()))
+        return jsonify({'rep':'error','data':"%s already used." % email})
+    g.cursor.execute("INSERT INTO users(email,name,passwd) VALUES(%s,%s,%s)",(email,username,hashlib.md5(passwd).hexdigest()))
     g.db.commit()
-    return redirect('/login')
+    return jsonify({'rep':'ok','data':'successfully signed.'})
 
 
 @app.route('/login',methods=['GET','POST'])
@@ -151,19 +156,18 @@ def login():
         g.cursor.execute("SELECT * FROM users WHERE email=%s AND passwd=%s",(email,hashlib.md5(passwd).hexdigest()))
         user=g.cursor.fetchone()
         if not user:
-            #return jsonify({'rep':'error'})
-            return redirect('/login')
+            return jsonify({'rep':'error','data':'email or passwd not correct'})
         else:
             session['logged_in']=True
             session['id']=user['id']
             session['email']=user['email']
             session['name']=user['name']
             session['passwd']=user['passwd']
-            #return json.jsonify({'rep':'ok'})
+            url='/'
             g.cursor.execute("SELECT value FROM settings WHERE name='admin'")
             if g.cursor.fetchone()['value']==email:
-                redirect('/admin')
-            return redirect('/')
+                url='/admin'
+            return jsonify({'rep':'ok','data':'login successfully.','url':url})
 
 
 @app.route('/logout')
@@ -179,49 +183,161 @@ def logout():
 def tiebaPost(t):
     data={}
     data['ie']='utf=8'
-    data['kw']=t['tieba']
+    data['kw']=t['tieba'].encode('utf8')
     headers={}
     headers['User-Agent']='Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.66 Safari/537.36'
     headers['Cookie']=t['cookie']
-    geturl=app.config['TIEBAURL']+t['tieba'].decode('utf-8').encode('gbk')
-    getreq=urllib2.Request(url=geturl,headers=headers)
-    soup=BeautifulSoup(urllib2.urlopen(getreq).read())
+    indexurl=app.config['TIEBAURL']+t['tieba'].encode('gbk')
+    request=urllib2.Request(url=indexurl,headers=headers)
+    soup=BeautifulSoup(urllib2.urlopen(request).read())
     data['tbs']=soup.body.find('script').string.split('"')[1].encode('utf-8')
-    postreq=urllib2.Request(url=app.config['SIGNURL'],data=data,headers=headers)
-    postres=urllib2.urlopen(postreq).read()
-    print postres
+    request=urllib2.Request(url=app.config['SIGNURL'],data=urllib.urlencode(data),headers=headers)
+    response=urllib2.urlopen(request)
+    meg=response.read()
+    return meg
 
 
-    
+
+
+@app.template_filter('strftime')
+def _jinja2_strftime(date,fmt=None):
+    if not fmt:
+        _format="%Y-%m-%d %H:%M:%S"
+    else:
+        _format=fmt
+    date=date if date else time.time()
+    return time.strftime(_format,time.localtime(date))
+
     
 
 @app.route('/',methods=['GET','POST'])
 @login_required
 def index():
     if request.method=='GET':
-        g.cursor.execute("SELECT cookie,tieba FROM users,tiebas_users,tiebas WHERE users.id=%s AND users.id=user_id AND tieba_id=tiebas.id",g.user['id'])
+        g.cursor.execute("SELECT message,tieba FROM users,tiebas_users,tiebas WHERE users.id=%s AND users.id=user_id AND tieba_id=tiebas.id",g.user['id'])
         tiebas=g.cursor.fetchall()
+        for t in tiebas:
+            if t['message']:
+                t['message']=loads(t['message'])
         return render_template('index.html',tiebas=tiebas)
     if request.method=='POST':
+        action=request.args.get('action')
+        tiebas=loads(request.form.get('tiebas'))
+        if action=='add':
+            add={}
+            i=0
+            for t in tiebas:
+                g.cursor.execute("SELECT id FROM tiebas WHERE tieba=%s",t)
+                tieba_id=g.cursor.fetchone()
+                if tieba_id:
+                    tieba_id=tieba_id['id']
+                    g.cursor.execute("SELECT * FROM tiebas_users WHERE tieba_id=%s AND user_id=%s",(tieba_id,g.user['id']))
+                    if g.cursor.fetchone():
+                        continue
+                    g.cursor.execute("INSERT INTO tiebas_users(tieba_id,user_id) VALUES(%s,%s)",(tieba_id,g.user['id']))
+                else:
+                    g.cursor.execute("INSERT INTO tiebas(tieba) VALUES(%s)",t)
+                    g.cursor.execute("SELECT id FROM tiebas WHERE tieba=%s",t)
+                    tieba_id=g.cursor.fetchone()['id']
+                    g.cursor.execute("INSERT INTO tiebas_users(tieba_id,user_id) VALUES(%s,%s)",(tieba_id,g.user['id']))
+                add[i]=t
+                i+=1
+            add['c']=i
+            if i==0:
+                return jsonify({'rep':'error','data':'you have added prior.'})
+            g.db.commit()
+            return jsonify({'rep':'ok','data':add})
 
-        return "doen"
+        if action=='delete':
+            deleted={}
+            i=0
+            for t in tiebas:
+                g.cursor.execute("SELECT id FROM tiebas WHERE tieba=%s",t)
+                tieba_id=g.cursor.fetchone()
+                if not tieba_id:
+                    continue
+                tieba_id=tieba_id['id']
+                g.cursor.execute("DELETE FROM tiebas_users WHERE user_id=%s AND tieba_id=%s",(g.user['id'],tieba_id))
 
-@app.route('/work',methods=['POST'])
-def work():
+                g.cursor.execute("SELECT id FROM tiebas,tiebas_users WHERE tiebas.id=tieba_id")
+                tiebasHasUser=g.cursor.fetchall()
+                tiebasHasUser=[tu['id'] for tu in tiebasHasUser]
+                args=','.join(itertools.repeat('%s',len(tiebasHasUser)))
+                sql="DELETE FROM tiebas WHERE id NOT IN (%s)" % args
+                g.cursor.execute(sql,tiebasHasUser)
+                deleted[i]=t
+                i+=1
+            deleted['c']=i
+            if i==0:
+                return jsonify({'rep':'error','data':'no tieba deleted.'})
+            g.db.commit()
+            return jsonify({'rep':'ok','data':deleted})
+        if action=='sign':
+            signed={}
+            i=0
+            for t in tiebas:
+                g.cursor.execute("SELECT id FROM tiebas WHERE tieba=%s",t)
+                tieba_id=g.cursor.fetchone()
+                if not tieba_id:
+                    continue
+                tieba_id=tieba_id['id']
+                g.cursor.execute("SELECT * FROM tiebas_users WHERE tieba_id=%s AND user_id=%s",(tieba_id,g.user['id']))
+                tieba_user=g.cursor.fetchone()
+                lastmeg=None
+                if tieba_user:
+                    lastmeg=tieba_user['message']
+                if lastmeg:
+                    lastmeg=loads(lastmeg)
+                    if lastmeg['error'] and lastmeg['no']!=4:
+                        continue
+                    if not lastmeg['error'] and lastmeg['no']==0:
+                        uinfo=lastmeg['data']['uinfo']
+                        lastsignday=time.strftime("%Y-%m-%d",time.localtime(uinfo['sign_time']))
+                        today=time.strftime("%Y-%m-%d",time.localtime())
+                        if lastsignday==today:
+                            continue
+                todaymeg=tiebaPost({'cookie':g.user['cookie'],'tieba':t})
+                g.cursor.execute("UPDATE tiebas_users SET message=%s WHERE tieba_id=%s AND user_id=%s",(todaymeg,tieba_id,g.user['id']))
+                signed[i]={'tieba':t,'meg':loads(todaymeg)}
+                i+=1
+
+            signed['c']=i
+            if i==0:
+                return jsonify({'rep':'error','data':'no tieba signed.'})
+            g.db.commit()
+            return jsonify({'rep':'ok','data':signed})
+
+
+
+
+
+
+@app.route('/cron',methods=['POST'])
+def cron():
+    db=connect_db()
+    cursor=db.cursor(cursorclass=DictCursor)
     email=request.form.get('email')
     passwd=request.form.get('passwd')
-    g.cursor.execute("SELECT value FROM settings WHERE name='admin' AND value=(SELECT email FROM users WHERE email=%s AND passwd=%s)",(email,passwd));
-    if not g.cursor.fetchone():
+    cursor.execute("SELECT value FROM settings WHERE name='admin' AND value=(SELECT email FROM users WHERE email=%s AND passwd=%s)",(email,hashlib.md5(passwd).hexdigest()));
+    if not cursor.fetchone():
         abort(400)
-    g.cursor.execute("SELECT cookie,tieba FROM users,tiebas_users,tiebas WHERE users.id=user_id AND tieba_id=tiebas.id")
-    tiebas=g.cursor.fetchall()
+    cursor.execute("SELECT cookie,tieba_id,user_id,tieba FROM users,tiebas_users,tiebas WHERE cookie IS NOT NULL AND users.id=user_id AND tieba_id=tiebas.id")
+    tiebas=cursor.fetchall()
+    tdict={}
+    i=0
     for t in tiebas:
-        tiebaPost(t)
-    return "done"
+      	tdict[i]=t
+      	i+=1
+        meg=tiebaPost(t)
+        cursor.execute("UPDATE tiebas_users SET message=%s WHERE tieba_id=%s AND user_id=%s",(meg,t['tieba_id'],t['user_id']))
+    db.commit()
+    cursor.close()
+    db.close()
+    return "hello,world."
 
 @app.route('/check')
 def check():
-    return "to do"
+    return "nothing to check"
 
         
 
@@ -236,6 +352,35 @@ def admin():
         g.cursor.execute("SELECT * FROM users WHERE name!=%s",g.user['name'])
         users=g.cursor.fetchall()
         return render_template('admin.html',users=users)
+    if request.method=='POST':
+        users=loads(request.form.get('users'))
+        deleted={}
+        i=0
+        for u in users:
+            g.cursor.execute("SELECT id FROM users WHERE id=%s",u)
+            uid=g.cursor.fetchone()
+            if not uid:
+                continue
+            uid=uid['id']
+            g.cursor.execute("DELETE FROM tiebas_users WHERE user_id=%s",u)
+            #g.cursor.execute("DELETE FROM tiebas WHERE id NOT IN (SELECT tid FROM (SELECT id as tid FROM tiebas,tiebas_users WHERE tiebas.id=tieba_id) AS t)")
+            g.cursor.execute("SELECT id FROM tiebas,tiebas_users WHERE tiebas.id=tieba_id")
+            tiebasHasUser=g.cursor.fetchall()
+            if tiebasHasUser:
+                tiebasHasUser=[t['id'] for t in tiebasHasUser]
+                args=','.join(itertools.repeat('%s',len(tiebasHasUser)))
+                sql="DELETE FROM tiebas WHERE id NOT IN (%s)" % args
+                g.cursor.execute(sql,tiebasHasUser)
+            else:
+                g.cursor.execute("DELETE FROM tiebas WHERE 1")
+            g.cursor.execute("DELETE FROM users WHERE id=%s",u)
+            deleted[i]=u
+            i+=1
+        deleted['c']=i
+        if i==0:
+            return jsonify({'rep':'error'})
+        g.db.commit()
+        return jsonify({'rep':'ok','data':deleted})
 
 
 
@@ -246,15 +391,29 @@ def settings():
     if request.method=='GET':
         return render_template('settings.html')
     if request.method=='POST':
-        oldpasswd=request.form.get('oldpasswd')
-        newpasswd=request.form.get('newpasswd')
-        if not oldpasswd or not newpasswd:
-            abort(400)
-        if oldpasswd!=newpasswd:
-            g.cursor.execute("UPDATE users SET passwd=%s WHERE name=%s AND passwd=%s",(newpasswd,g.user['name'],hashlib.md5(oldpasswd).hexdigest()))
-        g.db.commit()
-        return redirect('/settings')
+        action=request.form.get('f')
+        if action=='changeProfile':
+            newname=request.form.get('newname') if request.form.get('newname') else g.user['name']
+            oldpasswd=request.form.get('oldpasswd')
+            newpasswd=request.form.get('newpasswd') if request.form.get('newpasswd') else g.user['passwd']
+            if not oldpasswd:
+                abort(400)
+            g.cursor.execute("UPDATE users SET name=%s,passwd=%s WHERE email=%s AND passwd=%s",(newname,hashlib.md5(newpasswd).hexdigest(),g.user['email'],hashlib.md5(oldpasswd).hexdigest()))
+            g.db.commit()
+            return jsonify({'ok':'successfully changed.'})
+        if action=='addCookie':
+            cookie=request.form.get('cookie')
+            if not cookie:
+                abort(400)
+            g.cursor.execute("UPDATE users SET cookie=%s WHERE email=%s AND passwd=%s",(cookie,g.user['email'],g.user['passwd']))
+            g.db.commit()
+            return jsonify({'ok':'updated Cookie.'})
+        return jsonify({'error':'no post server of this way.'})
 
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
 
 
 #from bae.core.wsgi import WSGIApplication

@@ -7,43 +7,73 @@ Index
 
 <div class="btn-toolbar">
     <button class="btn btn-primary" data-toggle="modal" data-target="#myModal">Add tieba</button>
-    <button class="btn">Select All</button>
-    <button class="btn">Delete All</button>
-    <!-- <button class="btn">Sign All</button> -->
+    <button class="btn" id="selectAll">Select All</button>
+    <button class="btn" id="deleteSelected">Delete Selected</button>
+    <button class="btn" id="signAll">Sign All</button>
 </div>
 
 
 
 <div class="well">
-    {% if tiebas %}
-    <table class="table">
+    <table class="table" id="contents">
       <thead>
         <tr>
           <th>#</th>
           <th>Tieba Name</th>
-          <th>Last Sign</th>
-          <th>Info</th>
+          <th>Last Sign Time</th>
+          <th>Last Sign Info</th>
+          <th>Status</th>
           <th style="width: 36px;"></th>
         </tr>
       </thead>
+    {% if tiebas %}
       <tbody>
-      {% for t in Tiebas %}
+      {% for t in tiebas %}
         <tr>
             <td><input type="checkbox" name="tieba" value={{ t['tieba'] }}></td>
             <td>{{ t['tieba'] }}</td>
-          <td>No</td>
-          <td>NO</td>
+            {% if t['message'] %}
+            {% set meg=t['message'] %}
+
+
+            {% if meg['no']==0 and not meg['error'] %}
+            {% set uinfo=meg['data']['uinfo'] %}
+            <td>{{ uinfo['sign_time']|strftime }}<input type="hidden" name="sign_time" value="{{ uinfo['sign_time'] }}"></td>
+            <td>cont_sign_num:{{ uinfo['cont_sign_num'] }} cout_total_sing_num:{{ uinfo['cout_total_sing_num'] }} user_sign_rank:{{ uinfo['user_sign_rank'] }}</td>
+            <td><div class="form-group has-success">
+                    <label class="control-label">
+                        successfully signed
+                    </label>
+                </div></td>
+            {% else %}
+            <td>{% if meg['no']!=4 %}{{ 0|strftime('%Y-%m-%d') }}<input type="hidden" name="sign_time" value="0">{% else %}Unknown last sign time{% endif %}</td>
+            <td>{{ meg['error'] }}</td>
+            <td><div class="form-group has-error">
+                    <label class="control-label">
+                        {% if meg['no']==1101 %}repeat sign today.{% elif meg['no']==1010 %}No this name tieba {% elif meg['no']==4 %}<a href="/settings" title="please modify your cookie.">Cookie Invalid</a> {% else %}Unknown error{% endif %}
+                    </label>
+                </div></td>
+            {% endif %}
+
+
+            {% else %}
+            <td>Not sign yet</td>
+            <td>Not sign yet</td>
+            <td><div class="form-group has-info">
+                    <label class="control-label">
+                        Please sign right mow
+                        </label>
+                        </div></td>
+            {% endif %}
           <td>
-              <a href="#delete" style="color:black;">
+              <a href="#delete" name="tiebaToDelete" title="delete {{t['tieba']}}吧" id="deleteOne" style="color:black;">
                   <i class="glyphicon glyphicon-remove"></i></a>
           </td>
         </tr>
         {% endfor %}
       </tbody>
-    </table>
-    {% else %}
-    <p>No tiebas ,Please add one.</p>
     {% endif %}
+    </table>
 </div>
 
 <!-- Modal -->
@@ -59,15 +89,19 @@ Index
                     <span class="input-group-btn">
                         <button class="btn btn-default" type="button">Tieba Name</button>
                     </span>
-                    <input type="text" id="tieba" class="form-control">
+                    <input type="text" name="tiebas" id="tiebas" class="form-control">
                 </div><!-- /input-group -->
+                    <span class="help-block">use one space character to separate.</span>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary">Submit</button>
+          <button type="button" class="btn btn-primary" id="addTiebas">Submit</button>
         </div>
       </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
   </div><!-- /.modal -->
+{% endblock %}
+{% block script %}
+<script src="{{ url_for('static',filename='index.js') }}"></script>
 {% endblock %}
 

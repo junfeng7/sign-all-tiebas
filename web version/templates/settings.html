@@ -4,33 +4,49 @@ Settings
 {% endblock %}
 {% block body %}
 <div class="well change" style="
-    margin: 50px auto;     width: 400px;">
-<h3>Set your Server</h3>
-<form role="form" action="/settings" method="post">
+    margin: 50px auto; width: 600px;">
+    <div style="width:400px;">
+<h3>modify your profile</h3>
+<form role="form" action="/settings" method="post" id="changeProfile">
+  <div class="form-group">
+    <label for="newname">New Name</label>
+    <input type="text" class="form-control" name="newname" id="newname" placeholder="New Name">
+  </div>
+
   <div class="form-group">
     <label for="oldpasswd">Old Passwd</label>
     <input type="password" class="form-control" name="oldpasswd" id="oldpasswd" placeholder="Password">
   </div>
+
   <div class="form-group">
     <label for="newpasswd">New Password</label>
     <input type="password" class="form-control" name="newpasswd" id="newpassword" placeholder="Password">
-  </div>
-  <div class="form-group">
-   <div class="radio">
-  	<label>
-    		<input type="radio" name="usingMode" id="usingMode1" value="single" checked>
-    		  Single User
-  	</label>
-	</div>
-   <div class="radio">
-      <label>
-             <input type="radio" name="usingMode" id="usingMode2" value="multiple">
-             Multiple Users
-      </label>
+  </div> 
+  <input type="hidden" name="f" value="changeProfile"><br>
+  <button type="submit" class="btn btn-success">Submit</button>
+</form>
+
+
+<h3>add your cookie</h3>
+<form role="form" action="/settings" method="post" id="addCookie">
+  <div class="control-group">
+      <!-- Cookie -->
+      <label class="control-label"  for="cookie">Cookie</label>
+      <div class="controls">
+          <textarea name="cookie" class="form-control" id="cookie" value="" rows="4">{{ g.user['cookie'] }}</textarea>
+          <input type="hidden" name="f" value="addCookie"><br>
       </div>
-   </div>
+  </div>
+
   <button type="submit" class="btn btn-success">Submit</button>
 </form>
 </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static',filename='serialization.js')
+ }}"></script>
+<script src="{{ url_for('static',filename='settings.js') }}"></script>
 {% endblock %}
 

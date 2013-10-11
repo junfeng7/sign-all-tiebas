@@ -3,17 +3,45 @@
 Admin
 {% endblock %}
 {% block body %}
-<p><a href="/logout">Logout</a></p>
-<div class="well" style="
-    margin: 50px auto;     width: 600px;">
+
+
+
+<div class="btn-toolbar">
+    <button class="btn" id="selectAll">Select All</button>
+    <button class="btn" id="deleteSelected">Delete Selected</button>
+</div>
+
+
+
+<div class="well">
+    <table class="table" id="usersTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Email</th>
+          <th>Name</th>
+          <th style="width: 36px;"></th>
+        </tr>
+      </thead>
     {% if users %}
-    <ul>
+    <tbody>
     {% for user in users %}
-    <li>{{ user['name'] }}</li>
-    {% endfor %}
-    </ul>
-    {% else %}
-    <p>No user except you</p>
+    <tr>
+        <td><input type="checkbox" name="user" value={{ user['id'] }}></td>
+        <td>{{ user['email'] }}</td>
+        <td>{{ user['name'] }}</td>
+        <td>
+            <a href="#delete" name="{{ user['id'] }}" class="userA" title="delete" id="deleteOne" style="color:black;">
+                  <i class="glyphicon glyphicon-remove"></i></a>
+        </td>
+        </tr>
+        {% endfor %}
+      </tbody>
     {% endif %}
-    </div>    
+    </table>
+</div>    
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static',filename='admin.js') }}"></script>
 {% endblock %}

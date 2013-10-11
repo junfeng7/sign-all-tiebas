@@ -1,0 +1,1 @@
+DELETE FROM tiebas WHERE id NOT IN (SELECT tid FROM (SELECT id as tid FROM tiebas,tiebas_users WHERE tiebas.id=tieba_id) AS t)
