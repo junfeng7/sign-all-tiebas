@@ -9,4 +9,5 @@ DBPORT=int(const.MYSQL_PORT)
 DBHOST=const.MYSQL_HOST
 TIEBAURL='http://tieba.baidu.com/f?kw='
 SIGNURL='http://tieba.baidu.com/sign/add'
+TIEBAINDEX='http://tieba.baidu.com/'
 

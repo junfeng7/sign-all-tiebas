@@ -20,11 +20,11 @@ try :
 except :
     from BeautifulSoup import BeautifulSoup
 app = Flask(__name__)
-app.debug='True'
 app.config.from_object("config")
 app.secret_key=app.config["SECRET_KEY"]
+app.debug=app.config['DEBUG']
 
-
+TIEBAINDEX=app.config['TIEBAINDEX']
 
 def connect_db():
     return MySQLdb.connect(host=app.config["DBHOST"],port=app.config["DBPORT"],user=app.config["DBUSER"],passwd=app.config["DBPASSWD"],db=app.config["DBNAME"],charset='utf8')
@@ -196,6 +196,26 @@ def tiebaPost(t):
     meg=response.read()
     return meg
 
+def get_favorite(user_id,cookie):
+    favorites=[]
+    headers={}
+    headers['User-Agent']='Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.66 Safari/537.36'
+    headers['Cookie']=cookie
+    request=urllib2.Request(url=TIEBAINDEX,headers=headers)
+    soup=BeautifulSoup(urllib2.urlopen(request).read())
+    scripts=soup.find_all('script')
+    text=""
+    for i,s in enumerate(scripts):
+        if 'spage/widget/forumDirectory' in unicode(s.string):
+            text=unicode(s.string)
+    tiebas=[]
+    if text:
+        text=text.split(',',1)[1][0:-3]
+        forums=loads(text)['forums']
+        for f in forums:
+            tiebas.append(f['forum_name'])
+    
+    return tiebas
 
 
 
@@ -339,11 +359,44 @@ def cron():
     db.close()
     return "hello,world."
 
-@app.route('/check')
-def check():
-    return "nothing to check"
 
-        
+
+@app.route('/favorite')
+def favorite():
+    db=connect_db()
+    cursor=db.cursor(cursorclass=DictCursor)
+    email=request.form.get('email')
+    passwd=request.form.get('passwd')
+    cursor.execute("SELECT value FROM settings WHERE name='admin' AND value=(SELECT email FROM users WHERE email=%s AND passwd=%s)",(email,hashlib.md5(passwd).hexdigest()));
+    if not cursor.fetchone():
+        abort(400)
+    cursor.execute("SELECT * FROM users")
+    users=cursor.fetchall()
+    for u in users:
+        if u['cookie']:
+            user_id=u['id']
+            cookie=u['cookie']
+            tiebas=get_favorite(user_id,cookie)
+            for t in tiebas:
+                g.cursor.execute("SELECT id FROM tiebas WHERE tieba=%s",t)
+                tieba_id=g.cursor.fetchone()
+                if tieba_id:
+                    tieba_id=tieba_id['id']
+                    g.cursor.execute("SELECT * FROM tiebas_users WHERE tieba_id=%s AND user_id=%s",(tieba_id,user_id))
+                    if g.cursor.fetchone():
+                        continue
+                    g.cursor.execute("INSERT INTO tiebas_users(tieba_id,user_id) VALUES(%s,%s)",(tieba_id,user_id))
+                else:
+                    g.cursor.execute("INSERT INTO tiebas(tieba) VALUES(%s)",t)
+                    g.cursor.execute("SELECT id FROM tiebas WHERE tieba=%s",t)
+                    tieba_id=g.cursor.fetchone()['id']
+                    g.cursor.execute("INSERT INTO tiebas_users(tieba_id,user_id) VALUES(%s,%s)",(tieba_id,user_id))
+
+    
+    db.commit()
+    cursor.close()
+    db.close()
+    return "Hello,Favirote"
 
 
 
@@ -410,6 +463,22 @@ def settings():
             if not cookie:
                 abort(400)
             g.cursor.execute("UPDATE users SET cookie=%s WHERE email=%s AND passwd=%s",(cookie,g.user['email'],g.user['passwd']))
+            ftiebas=get_favorite(g.user['id'],cookie)
+            for t in ftiebas:
+                g.cursor.execute("SELECT id FROM tiebas WHERE tieba=%s",t)
+                tieba_id=g.cursor.fetchone()
+                if tieba_id:
+                    tieba_id=tieba_id['id']
+                    g.cursor.execute("SELECT * FROM tiebas_users WHERE tieba_id=%s AND user_id=%s",(tieba_id,g.user['id']))
+                    if g.cursor.fetchone():
+                        continue
+                    g.cursor.execute("INSERT INTO tiebas_users(tieba_id,user_id) VALUES(%s,%s)",(tieba_id,g.user['id']))
+                else:
+                    g.cursor.execute("INSERT INTO tiebas(tieba) VALUES(%s)",t)
+                    g.cursor.execute("SELECT id FROM tiebas WHERE tieba=%s",t)
+                    tieba_id=g.cursor.fetchone()['id']
+                    g.cursor.execute("INSERT INTO tiebas_users(tieba_id,user_id) VALUES(%s,%s)",(tieba_id,g.user['id']))
+
             g.db.commit()
             return jsonify({'ok':'updated Cookie.'})
         return jsonify({'error':'no post server of this way.'})
