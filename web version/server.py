@@ -203,7 +203,7 @@ def get_favorite(user_id,cookie):
     headers['Cookie']=cookie
     request=urllib2.Request(url=TIEBAINDEX,headers=headers)
     soup=BeautifulSoup(urllib2.urlopen(request).read())
-    scripts=soup.find_all('script')
+    scripts=soup.findAll('script')
     text=""
     for i,s in enumerate(scripts):
         if 'spage/widget/forumDirectory' in unicode(s.string):
