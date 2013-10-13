@@ -44,9 +44,10 @@ function addTiebas(e) {
             console.log(xhr.status+":"+xhr.statusText+"\n"+xhr.responseText);
             if (response.rep=="ok") {
                 for (var j=0;j<response.data.c;++j) {
-                    var row=table.insertRow(-1);
-                    row.innerHTML="<td><input type=\"checkbox\" name=\"tieba\" value=\""+response.data[j]+"\"></td><td>"+response.data[j]+"</td><td>First add,unknown signed time</td><td>No sign info</td><td>Not sign today</td><td><a href=\"#delete\" title=\"delete "+response.data[j]+"吧\" style=\"color:black;\"><i class=\"glyphicon glyphicon-remove\"></i></a></td>";
-                    row.lastElementChild.lastElementChild.addEventListener("click",deleteTieba);
+                    var tr=document.createElement("tr");
+                    tr.innerHTML="<td><input type=\"checkbox\" name=\"tieba\" value=\""+response.data[j]+"\"></td><td>"+response.data[j]+"</td><td>First add,unknown signed time</td><td>No sign info</td><td>Not sign today</td><td><a href=\"#delete\" title=\"delete "+response.data[j]+"吧\" style=\"color:black;\"><i class=\"glyphicon glyphicon-remove\"></i></a></td>";
+                    tr.lastElementChild.lastElementChild.addEventListener("click",deleteTieba);
+                    table.tBodies[0].appendChild(tr);
                 }
             }
         }
@@ -54,7 +55,6 @@ function addTiebas(e) {
 
     xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");
     xhr.send("tiebas="+JSON.stringify(tiebas));
-    console.log("after send");
     $("#myModal").modal("hide");
     input.value="";
 
@@ -82,6 +82,7 @@ function deleteTieba() {
     var table=document.getElementById("contents");
     var tiebasToDelete=[];
     var nodesToDelete=[];
+    this.disalbed=true;
     if (this.id=="deleteSelected") {
         var tiebasCheckbox=document.getElementsByName("tieba");
         for (var i=0;i<tiebasCheckbox.length;++i) {
@@ -104,6 +105,7 @@ function deleteTieba() {
         setTimeout(function() {
             table.parentNode.removeChild(megDiv);
         }, 750);
+        this.disalbed=false;
         return ;
     }
     var xhr=new XMLHttpRequest();
@@ -130,8 +132,8 @@ function deleteTieba() {
                 var tiebasCheckbox=document.getElementsByName("tieba");
                 for (var i=0;i<response.data['c'];++i) {
                     for (var j=0;j<tiebasCheckbox.length;++j) {
-                        console.log(tiebasCheckbox[j])
                         if (tiebasCheckbox[j].value==response.data[i]) {
+                            console.log(tiebasCheckbox[j])
                             nodesToDelete.push(tiebasCheckbox[j].parentNode.parentNode);
                             break;
                         }
@@ -142,6 +144,7 @@ function deleteTieba() {
                     table.tBodies[0].removeChild(nodesToDelete[j]);
                 }
             }
+            this.disalbed=false;
             console.log(xhr.status+":"+xhr.statusText+"\n"+xhr.responseText);
         }
     };
@@ -159,6 +162,8 @@ function signAll() {
     var nodesToUpdate=[];
     var tiebasCheckbox=document.getElementsByName("tieba");
     var check=false;
+    var button=this;
+    button.disabled=true;
     for (var i=0;i<tiebasCheckbox.length;++i) {
         if (tiebasCheckbox[i].checked) {
             check=true;
@@ -193,6 +198,7 @@ function signAll() {
         setTimeout(function() {
             table.parentNode.removeChild(megDiv);
         }, 750);
+        button.disabled=false;
         return ;
     }
     var xhr=new XMLHttpRequest();
@@ -230,7 +236,7 @@ function signAll() {
                                 console.log(uinfo);
                                 var now=new Date(Number(meg["data"]["uinfo"]["sign_time"]+"000"));
                                 tds[2].innerHTML=now.toLocaleString()+"<input type=\"hidden\" name=\"sign_time\" value=\""+meg["data"]["uinfo"]["sign_time"]+"\">";
-                                tds[3].innerText="cont_sign_num:"+uinfo["cont_sign_num"]+" cout_total_sing_num:"+uinfo["cout_total_sing_num"]+" user_sign_rank:"+uinfo["user_sign_rank"];
+                                tds[3].innerText="连续签到:"+uinfo["cont_sign_num"]+"天,总签到:"+uinfo["cout_total_sing_num"]+" 天,当前第"+uinfo["user_sign_rank"]+"个签到";
                                 tds[4].innerHTML="<div class=\"form-group has-success\"><label class=\"control-label\">successfully signed</label></div>"
                             }
                             // error condition fucking do.
@@ -263,6 +269,7 @@ function signAll() {
                     }
                 }
             }
+            button.disabled=false;
             console.log(xhr.status+":"+xhr.statusText+"\n"+xhr.responseText);
         }
     };

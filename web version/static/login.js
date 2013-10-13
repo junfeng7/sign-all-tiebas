@@ -4,6 +4,8 @@ function Submit(e) {
     var formId=divParent.id;
     var errorInput=false;
     var form=this;
+    var btn=form.elements["submit-btn"];
+    btn.disabled=true;
     var emailMatch=/^([a-zA-Z0-9]+[.|-|_]*)*[a-zA-Z0-9]+_*@([a-zA-Z0-9]+[.|-]?)*[a-zA-Z0-9]+\.[a-zA-Z]{2,3}$/;
     for (var i=0;i<this.elements.length;++i) {
         var field=this.elements[i];
@@ -30,6 +32,7 @@ function Submit(e) {
         setTimeout(function() {
             divParent.removeChild(megDiv);
         }, 750);
+        btn.disabled=false;
         return;
     }
     var xhr=new XMLHttpRequest();
@@ -65,6 +68,7 @@ function Submit(e) {
                 }, 750);
 
             }
+            btn.disabled=false;
             console.log(xhr.status+":"+xhr.statusText+"\n"+xhr.responseText);
         }
     };

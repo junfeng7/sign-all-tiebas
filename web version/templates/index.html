@@ -26,8 +26,8 @@ Index
           <th style="width: 36px;"></th>
         </tr>
       </thead>
-    {% if tiebas %}
       <tbody>
+    {% if tiebas %}
       {% for t in tiebas %}
         <tr>
             <td><input type="checkbox" name="tieba" value={{ t['tieba'] }}></td>
@@ -39,7 +39,7 @@ Index
             {% if meg['no']==0 and not meg['error'] %}
             {% set uinfo=meg['data']['uinfo'] %}
             <td>{{ uinfo['sign_time']|strftime }}<input type="hidden" name="sign_time" value="{{ uinfo['sign_time'] }}"></td>
-            <td>cont_sign_num:{{ uinfo['cont_sign_num'] }} cout_total_sing_num:{{ uinfo['cout_total_sing_num'] }} user_sign_rank:{{ uinfo['user_sign_rank'] }}</td>
+            <td>连续签到：{{ uinfo['cont_sign_num'] }}天,总签到：{{ uinfo['cout_total_sing_num'] }}天,当前第:{{ uinfo['user_sign_rank'] }}个签到</td>
             <td><div class="form-group has-success">
                     <label class="control-label">
                         successfully signed
@@ -71,8 +71,8 @@ Index
           </td>
         </tr>
         {% endfor %}
-      </tbody>
     {% endif %}
+      </tbody>
     </table>
 </div>
 

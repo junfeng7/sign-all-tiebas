@@ -3,7 +3,7 @@
 Login
 {% endblock %}
 {% block body %}
-    <div class="" id="loginModal" style="margin: auto;width: 500px;">
+    <div class="" id="loginModal" style="margin: auto;max-width:400px">
        <div class="modal-header">
             <h3>Have an Account?</h3>
           </div>
@@ -39,7 +39,7 @@ Login
                       <div class="control-group">
                         <!-- Button -->
                         <div class="controls">
-                          <button class="btn btn-success" id="loginbutton">Login</button>
+                          <button class="btn btn-success" id="loginbutton" name="submit-btn">Login</button>
                         </div>
                       </div>
                     </fieldset>
@@ -83,7 +83,7 @@ Login
                       <div class="control-group">
                         <!-- Button-->
                         <div class="controls">
-                            <button class="btn btn-success">Sign</button>
+                            <button class="btn btn-success" id="signbutton" name="submit-btn">Sign</button>
                         </div>
                       </div>
                     </fieldset>

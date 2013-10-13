@@ -261,10 +261,14 @@ def index():
 
                 g.cursor.execute("SELECT id FROM tiebas,tiebas_users WHERE tiebas.id=tieba_id")
                 tiebasHasUser=g.cursor.fetchall()
-                tiebasHasUser=[tu['id'] for tu in tiebasHasUser]
-                args=','.join(itertools.repeat('%s',len(tiebasHasUser)))
-                sql="DELETE FROM tiebas WHERE id NOT IN (%s)" % args
-                g.cursor.execute(sql,tiebasHasUser)
+                print tiebasHasUser
+                if tiebasHasUser:
+                    tiebasHasUser=[th['id'] for th in tiebasHasUser]
+                    args=','.join(itertools.repeat('%s',len(tiebasHasUser)))
+                    sql="DELETE FROM tiebas WHERE id NOT IN (%s)" % args
+                    g.cursor.execute(sql,tiebasHasUser)
+                else:
+                    g.cursor.execute("DELETE FROM tiebas WHERE 1")
                 deleted[i]=t
                 i+=1
             deleted['c']=i

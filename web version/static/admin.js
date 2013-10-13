@@ -18,6 +18,7 @@ function deleteUsers() {
     var usersToDelete=[];
     var nodesToDelete=[];
     
+    this.disabled=true;
     if (this.id=="deleteSelected") {
         var usersCheckbox=document.getElementsByName("user");
         for (var i=0;i<usersCheckbox.length;++i) {
@@ -38,6 +39,7 @@ function deleteUsers() {
         setTimeout(function() {
             table.parentNode.removeChild(megDiv);
         }, 750);
+        this.disabled=false;
         return ;
     }
     var xhr=new XMLHttpRequest();
@@ -77,6 +79,7 @@ function deleteUsers() {
                     }
                 }
             }
+            this.disabled=false;
             console.log(xhr.status+":"+xhr.statusText+"\n"+xhr.responseText);
         }
     };

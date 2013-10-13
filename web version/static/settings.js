@@ -2,6 +2,8 @@ function ajaxSubmit(e) {
     e.preventDefault();
     var megDiv=document.createElement("div");
     var form=this;
+    var btn=form.elements["submit-btn"];
+    btn.disabled=true;
     for (var j=0;j<this.elements.length;++j) {
         field = this.elements[j];
         if (field.id=="oldpasswd"||field=="cookie") {
@@ -12,6 +14,7 @@ function ajaxSubmit(e) {
                 setTimeout(function() {
                         form.parentNode.removeChild(megDiv);
                 }, 750);
+                btn.disabled=false;
                 return;
             }
         }
@@ -37,6 +40,7 @@ function ajaxSubmit(e) {
                 }, 750);
             }
             console.log(xhr.status+":"+xhr.statusText+"\n"+xhr.responseText);
+            btn.disabled=false;
         }
     }
     xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");
