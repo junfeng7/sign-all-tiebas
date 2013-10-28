@@ -89,7 +89,7 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if g.user['email']!=g.admin or not g.admin: 
+        if g.user['email']!=g.admin or not g.admin:
             return redirect('/')
         return f(*args, **kwargs)
     return decorated_function
@@ -214,7 +214,7 @@ def get_favorite(user_id,cookie):
         forums=loads(text)['forums']
         for f in forums:
             tiebas.append(f['forum_name'])
-    
+
     return tiebas
 
 
@@ -228,7 +228,7 @@ def _jinja2_strftime(date,fmt=None):
     date=date if date else time.time()
     return time.strftime(_format,time.localtime(date))
 
-    
+
 
 @app.route('/',methods=['GET','POST'])
 @login_required
@@ -345,14 +345,31 @@ def cron():
     cursor.execute("SELECT value FROM settings WHERE name='admin' AND value=(SELECT email FROM users WHERE email=%s AND passwd=%s)",(email,hashlib.md5(passwd).hexdigest()));
     if not cursor.fetchone():
         abort(400)
-    cursor.execute("SELECT cookie,tieba_id,user_id,tieba FROM users,tiebas_users,tiebas WHERE cookie IS NOT NULL AND users.id=user_id AND tieba_id=tiebas.id")
+    cursor.execute("SELECT cookie,tieba_id,user_id,tieba,message FROM users,tiebas_users,tiebas WHERE cookie IS NOT NULL AND users.id=user_id AND tieba_id=tiebas.id")
     tiebas=cursor.fetchall()
     tdict={}
     i=0
     for t in tiebas:
+
+        lastmeg=t['message']
+        if lastmeg:
+            lastmeg=loads(lastmeg)
+            if not lastmeg['error'] and lastmeg['no']==0:
+                uinfo=lastmeg['data']['uinfo']
+                lastsignday=time.strftime("%Y-%m-%d",time.localtime(uinfo['sign_time']))
+                today=time.strftime("%Y-%m-%d",time.localtime())
+                if lastsignday==today:
+                    continue
+
       	tdict[i]=t
       	i+=1
-        meg=tiebaPost(t)
+
+        while True:
+            meg=tiebaPost(t)
+            jsonmeg=loads(meg)
+            if not jsonmeg['error'] and jsonmeg['no']==0:
+                break
+
         cursor.execute("UPDATE tiebas_users SET message=%s WHERE tieba_id=%s AND user_id=%s",(meg,t['tieba_id'],t['user_id']))
     db.commit()
     cursor.close()
@@ -392,7 +409,7 @@ def favorite():
                     tieba_id=g.cursor.fetchone()['id']
                     g.cursor.execute("INSERT INTO tiebas_users(tieba_id,user_id) VALUES(%s,%s)",(tieba_id,user_id))
 
-    
+
     db.commit()
     cursor.close()
     db.close()
